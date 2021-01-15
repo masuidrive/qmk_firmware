@@ -133,7 +133,7 @@ else
         # This ensures that the EEPROM page buffer fits into RAM
         USE_PROCESS_STACKSIZE = 0x600
         USE_EXCEPTIONS_STACKSIZE = 0x300
-        
+
         SRC += $(PLATFORM_COMMON_DIR)/eeprom_stm32.c
         SRC += $(PLATFORM_COMMON_DIR)/flash_stm32.c
         OPT_DEFS += -DEEPROM_EMU_STM32F042x6
@@ -500,6 +500,13 @@ ifeq ($(strip $(OLED_DRIVER_ENABLE)), yes)
     COMMON_VPATH += $(DRIVER_PATH)/oled
     QUANTUM_LIB_SRC += i2c_master.c
     SRC += oled_driver.c
+endif
+
+ifeq ($(strip $(MTCH6102_DRIVER_ENABLE)), yes)
+    OPT_DEFS += -DMTCH6102_DRIVER_ENABLE
+    COMMON_VPATH += $(DRIVER_PATH)/trackpad
+    QUANTUM_LIB_SRC += i2c_master.c
+    SRC += mtch6102_driver.c
 endif
 
 include $(DRIVER_PATH)/qwiic/qwiic.mk
