@@ -1,29 +1,23 @@
 /*
-Copyright 2021 Yuichiro MASUI <https://github.com/masuidrive>
+MTCH6102 Trackpad I2C chip driver for QMK.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Copyright 2021 Yuichiro MASUI <https://twitter.com/masuidrive>
+This software is licensed with a Modified BSD License.
 */
+
 #pragma once
 
-/* configuration */
+/* Configuration */
 #define MTCH6102_I2C_ADDR 0x25
-#define MTCH6102_I2C_TIMEOUT 10000
+#define MTCH6102_I2C_TIMEOUT 1000 // ms
 #define MTCH6102_MATRIX_WIDTH 7
 #define MTCH6102_MATRIX_HEIGHT 6
-#define MTCH6102_TAPDISTANCE 50
-#define MTCH6102_TAPINTERVAL 10
+#define MTCH6102_PAD_SCALE 1.0
+#define MTCH6102_TAPDISTANCE 24 // px
+#define MTCH6102_TAPTIME 100 // ms
+#define MTCH6102_EMU_CLICK_TIME 10 // ms click emulation time
+#define MTCH6102_DEBUG // print debug message
 
+/* use pointing device call hooks */
 extern void pointing_device_init(void);
 extern void pointing_device_task(void);
-
