@@ -9,10 +9,11 @@ This software is licensed with a Modified BSD License.
 
 /* Configuration */
 #define MTCH6102_I2C_ADDR 0x25
-#define MTCH6102_I2C_TIMEOUT 1000 // ms
+#define MTCH6102_I2C_TIMEOUT 100 // ms
 #define MTCH6102_MATRIX_WIDTH 7
 #define MTCH6102_MATRIX_HEIGHT 6
 #define MTCH6102_PAD_SCALE 1.0
+#define MTCH6102_SCROLL_SCALE 0.08
 #define MTCH6102_TAPDISTANCE 24 // px
 #define MTCH6102_TAPTIME 100 // ms
 #define MTCH6102_EMU_CLICK_TIME 10 // ms click emulation time

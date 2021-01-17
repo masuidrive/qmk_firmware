@@ -23,6 +23,8 @@
 #include "i2c_master.h"
 #include "timer.h"
 #include "wait.h"
+# include "debug.h"
+
 
 #ifndef F_SCL
 #    define F_SCL 400000UL  // SCL frequency
@@ -62,7 +64,7 @@ i2c_status_t i2c_start(uint8_t address, uint16_t timeout) {
 
     // check if the start condition was successfully transmitted
     if (((TW_STATUS & 0xF8) != TW_START) && ((TW_STATUS & 0xF8) != TW_REP_START)) {
-        return I2C_STATUS_ERROR;
+        return I2C_STATUS_ERROR*3;
     }
 
     // load slave address into data register
@@ -80,7 +82,7 @@ i2c_status_t i2c_start(uint8_t address, uint16_t timeout) {
     // check if the device has acknowledged the READ / WRITE mode
     uint8_t twst = TW_STATUS & 0xF8;
     if ((twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK)) {
-        return I2C_STATUS_ERROR;
+        return I2C_STATUS_ERROR*4;
     }
 
     return I2C_STATUS_SUCCESS;
