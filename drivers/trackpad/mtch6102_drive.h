@@ -19,6 +19,8 @@ This software is licensed with a Modified BSD License.
 #define MTCH6102_EMU_CLICK_TIME 10 // ms click emulation time
 #define MTCH6102_DEBUG // print debug message
 
+// #define MTCH6102_CLICK_ENABLE // Enable tap to click feature
+
 /* use pointing device call hooks */
 extern void pointing_device_init(void);
 extern void pointing_device_task(void);
