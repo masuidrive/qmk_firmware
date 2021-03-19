@@ -45,6 +45,8 @@ static double last_y = POINTER_DISABLE;
 static int16_t touchdown_x = -1;
 static int16_t touchdown_y = -1;
 static uint32_t touchdown_time;
+static float over_x = 0;
+static float over_y = 0;
 
 #ifdef MTCH6102_CLICK_ENABLE
 static bool mouse_btn1_click_emu = false;
@@ -61,6 +63,7 @@ static uint16_t last_scan_at = 0;
 #else
 # define DEBUG(fmt, ...)
 #endif
+# include "debug.h"
 
 /* Read 1 byte from register of MTCH6102 */
 static uint8_t i2c_read_register(const uint8_t reg) {
@@ -76,21 +79,29 @@ static i2c_status_t i2c_write_register(const uint8_t reg, const uint8_t data) {
 
 /* Initialize MTCH6102 */
 void pointing_device_init(void) {
+    timer_init();
+
     // Wait MTCH6102 to wake up
-    wait_ms(1500);
+    wait_ms(2000);
 
     /* Configure I2C Master */
     i2c_init();
 
     /* Configure MTCH6102 */
     for(int i = 0; i < I2C_RETRY_COUNT; ++i) {
-        wait_ms(100);
+        wait_ms(300);
+        DEBUG("i> 1, %d\n",i2c_write_register(OP_MODE, OP_MODE_TOUCH));
         if(i2c_write_register(OP_MODE, OP_MODE_TOUCH) != I2C_STATUS_SUCCESS) continue;
+        DEBUG("i> 2\n");
         if(i2c_write_register(NUMBEROFXCHANNELS, MTCH6102_MATRIX_WIDTH) != I2C_STATUS_SUCCESS) continue;
+        DEBUG("i> 3\n");
         if(i2c_write_register(NUMBEROFYCHANNELS, MTCH6102_MATRIX_HEIGHT) != I2C_STATUS_SUCCESS) continue;
+        DEBUG("i> 4\n");
         last_y = 0; // not POINTER_DISABLE
         break;
     }
+
+    // last_scan_at = timer_read();
 }
 
 static bool has_report_changed(const report_mouse_t first, const report_mouse_t second) {
@@ -113,27 +124,38 @@ void pointing_device_task(void) {
     }
 #endif
 
-    //　if (timer_elapsed(last_scan_at) > SCAN_INTERVAL) DEBUG("%d,%d\n",layer_state,last_scan_at);
+    //if (timer_elapsed(last_scan_at) > SCAN_INTERVAL) xprintf("S: %d,%d,%d,%d\n",layer_state,last_scan_at,last_y,timer_elapsed(last_scan_at));
 
-    if (timer_elapsed(last_scan_at) > SCAN_INTERVAL && last_y != POINTER_DISABLE) {
+    if (last_y != POINTER_DISABLE && timer_elapsed(last_scan_at) > SCAN_INTERVAL) {
         last_scan_at = timer_read();
 
         const uint8_t touch_state = i2c_read_register(TOUCHSTATE);
         const uint8_t touch_lsb = i2c_read_register(TOUCHLSB);
-        const double touch_x = ((i2c_read_register(TOUCHX) << 4) + ((touch_lsb & 0xf0) >> 4)) * MTCH6102_PAD_SCALE;
-        const double touch_y = ((i2c_read_register(TOUCHY) << 4) + (touch_lsb & 0x0f)) * MTCH6102_PAD_SCALE;
+        // const double touch_x = (i2c_read_register(TOUCHX) << 4) + ((touch_lsb & 0xf0) >> 4);
+        // const double touch_y = (i2c_read_register(TOUCHY) << 4) + (touch_lsb & 0x0f);
+        const double touch_y = (i2c_read_register(TOUCHX) << 4) + ((touch_lsb & 0xf0) >> 4);
+        const double touch_x = (i2c_read_register(TOUCHY) << 4) + (touch_lsb & 0x0f);
         const bool touch_event = !!(touch_state & 0x01);
         /* Never use MTCH6102 on-chip gesture recognizer */
+        DEBUG("T: %d,%d,%d\n",touch_x,touch_y,touch_event);
 
         if (touch_event) {
             /* set difference current x/y to previously x/y to report.x/y */
             if (last_x != TOUCH_UP) {
                 if(layer_state_is(default_layer_state) || layer_state_is(3)) {
-                    report.y = (last_x - touch_x);
-                    report.x = (last_y - touch_y) * -1;
+                    const double x = (last_y - touch_y) * MTCH6102_PAD_SCALE * -1 + over_x;
+                    const double y = (last_x - touch_x) * MTCH6102_PAD_SCALE * -1 + over_y;
+                    report.x = x;
+                    report.y = y;
+                    over_x = x - report.x;
+                    over_y = y - report.y;
                 } else {
-                    report.v = (last_x - touch_x) * MTCH6102_SCROLL_SCALE;
-                    report.h = (last_y - touch_y) * MTCH6102_SCROLL_SCALE;// * -1;
+                    const double x = (last_x - touch_x) * MTCH6102_SCROLL_SCALE + over_x;
+                    const double y = (last_y - touch_y) * MTCH6102_SCROLL_SCALE * -1 + over_y;
+                    report.v = x;
+                    report.h = y;
+                    over_x = x - report.v;
+                    over_y = y - report.h;
                 }
             }
             last_x = touch_x;
@@ -141,9 +163,11 @@ void pointing_device_task(void) {
 
             /* record touchdown time for mouse btn emulation */
             if(touchdown_x < 0) {
+#ifdef MTCH6102_MOUSE_TAP_LAYER
                 if(layer_state_is(default_layer_state)) {
-                    layer_on(3);
+                    layer_on(MTCH6102_MOUSE_TAP_LAYER);
                 }
+#endif
                 touchdown_x = touch_x;
                 touchdown_y = touch_y;
                 touchdown_time = timer_read32();
@@ -151,9 +175,10 @@ void pointing_device_task(void) {
         }
         else { /* if touch up */
             if (last_x != TOUCH_UP && touchdown_x >=0) {
-                layer_off(3);
+#ifdef MTCH6102_MOUSE_TAP_LAYER
+                layer_off(MTCH6102_MOUSE_TAP_LAYER);
+#endif
 #ifdef MTCH6102_CLICK_ENABLE
-
                 /* Tap within MTCH6102_TAPTIME and MTCH6102_TAPDISTANCE */
                 /* then emulate $MTCH6102_EMU_CLICK_TIME ms of mouse button 1 clicks. */
                 if(timer_elapsed32(touchdown_time) < MTCH6102_TAPTIME) {
@@ -166,12 +191,13 @@ void pointing_device_task(void) {
                     }
                 }
 #endif
-
             }
             // reset vars
             last_x = TOUCH_UP;
             touchdown_x = -1;
             touchdown_y = -1;
+            over_x = 0;
+            over_y = 0;
         }
     }
 
