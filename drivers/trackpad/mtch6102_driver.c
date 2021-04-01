@@ -40,6 +40,7 @@
 #define I2C_RETRY_COUNT 20
 #define TOUCH_UP -1 /* last_x */
 #define POINTER_DISABLE -1 /* last_y */
+#define PAD_CELL_PIXELS 64
 static double last_x = TOUCH_UP;
 static double last_y = POINTER_DISABLE;
 static int16_t touchdown_x = -1;
@@ -133,8 +134,8 @@ void pointing_device_task(void) {
         const uint8_t touch_lsb = i2c_read_register(TOUCHLSB);
         // const double touch_x = (i2c_read_register(TOUCHX) << 4) + ((touch_lsb & 0xf0) >> 4);
         // const double touch_y = (i2c_read_register(TOUCHY) << 4) + (touch_lsb & 0x0f);
-        const double touch_y = (i2c_read_register(TOUCHX) << 4) + ((touch_lsb & 0xf0) >> 4);
-        const double touch_x = (i2c_read_register(TOUCHY) << 4) + (touch_lsb & 0x0f);
+        const double touch_y = (MTCH6102_MATRIX_HEIGHT * PAD_CELL_PIXELS) - ((i2c_read_register(TOUCHX) << 4) + ((touch_lsb & 0xf0) >> 4));
+        const double touch_x = (MTCH6102_MATRIX_WIDTH * PAD_CELL_PIXELS) - ((i2c_read_register(TOUCHY) << 4) + (touch_lsb & 0x0f));
         const bool touch_event = !!(touch_state & 0x01);
         /* Never use MTCH6102 on-chip gesture recognizer */
         DEBUG("T: %d,%d,%d\n",touch_x,touch_y,touch_event);
@@ -143,15 +144,15 @@ void pointing_device_task(void) {
             /* set difference current x/y to previously x/y to report.x/y */
             if (last_x != TOUCH_UP) {
                 if(layer_state_is(default_layer_state) || layer_state_is(3)) {
-                    const double x = (last_y - touch_y) * MTCH6102_PAD_SCALE * -1 + over_x;
-                    const double y = (last_x - touch_x) * MTCH6102_PAD_SCALE * -1 + over_y;
+                    const double x = (last_x - touch_x) * MTCH6102_PAD_SCALE + over_x;
+                    const double y = (last_y - touch_y) * MTCH6102_PAD_SCALE + over_y;
                     report.x = x;
                     report.y = y;
                     over_x = x - report.x;
                     over_y = y - report.y;
                 } else {
                     const double x = (last_x - touch_x) * MTCH6102_SCROLL_SCALE + over_x;
-                    const double y = (last_y - touch_y) * MTCH6102_SCROLL_SCALE * -1 + over_y;
+                    const double y = (last_y - touch_y) * MTCH6102_SCROLL_SCALE + over_y;
                     report.v = x;
                     report.h = y;
                     over_x = x - report.v;

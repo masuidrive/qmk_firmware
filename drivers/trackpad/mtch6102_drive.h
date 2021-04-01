@@ -10,8 +10,9 @@ This software is licensed with a Modified BSD License.
 /* Configuration */
 #define MTCH6102_I2C_ADDR 0x25
 #define MTCH6102_I2C_TIMEOUT 100 // ms
-#define MTCH6102_MATRIX_WIDTH 7
+#define MTCH6102_MATRIX_WIDTH 8
 #define MTCH6102_MATRIX_HEIGHT 7
+#define MTCH6102_MATRIX_ROTATE 0
 #define MTCH6102_PAD_SCALE 1.5
 #define MTCH6102_SCROLL_SCALE 0.03
 #define MTCH6102_TAPDISTANCE 24 // px
